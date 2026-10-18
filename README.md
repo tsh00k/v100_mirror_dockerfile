@@ -20,13 +20,16 @@ uv, VS Code Server, and `pi05_deployments`.
 |-- config/sshd_config
 `-- scripts/
     |-- check_environment.py
+    |-- ensure-sshd.sh
     |-- enable-public-mirrors.sh
-    `-- entrypoint.sh
+    |-- entrypoint.sh
+    |-- nvidia-smi.sh
+    `-- sshd.sh
 ```
 
 ## Build
 
-The image was built successfully on 2026-10-18:
+The baseline 0.1 image was built successfully on 2026-10-18:
 
 ```text
 tag:       vla-lerobot-v100:0.1
@@ -43,11 +46,19 @@ docker build --progress=plain -t vla-lerobot-v100:0.1 .
 The default build uses Chinese mirrors. Each mirror URL is an overridable build
 argument; see the top of `Dockerfile`.
 
-The completed build passed `pip check`, the Dockerfile build check, and the
+That baseline build passed `pip check`, the Dockerfile build check, and the
 CPU-only import/version check. A local container also passed its SSH startup,
 host-key generation, authorized-key permissions, default working directory,
 and command-availability checks. GPU access cannot be tested on this build host
 and remains part of the remote V100 acceptance.
+
+Rebuild and repeat the acceptance checks after changing the image sources;
+the baseline image ID above does not describe later unbuilt changes.
+
+The entrypoint starts SSH even when a hosting platform replaces the image's
+default command with `sleep infinity`. When the normal SSH foreground command
+is retained, the entrypoint only prepares and validates SSH before executing
+that command.
 
 ## Run
 
@@ -81,6 +92,12 @@ python /usr/local/share/v100-image/check_environment.py --require-gpu
 
 The check exercises FP32 matrix multiplication on every visible GPU. Model
 download and PI0.5 inference remain separate acceptance steps.
+
+The target platform currently injects a broken `/usr/bin/nvidia-smi` wrapper.
+This image therefore puts a driver-matched fallback in `/opt/nvidia-fallback`
+and exposes it as `/usr/local/bin/nvidia-smi`, which precedes `/usr/bin` on
+`PATH`. The fallback is pinned to host driver `535.154.05`; revalidate or
+update it before using the image on a different driver pool.
 
 ## Optional public mirrors
 

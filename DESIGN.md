@@ -29,10 +29,16 @@ scripts are outside this image.
   cu118.
 - The host driver's reported CUDA 12.2 is its maximum supported CUDA driver API
   level. It does not require a CUDA 12.2 userspace in the container.
-- The Dockerfile never installs an NVIDIA kernel driver, `nvidia-utils`, or a
-  replacement `libnvidia-ml.so`. `nvidia-smi` and the driver libraries must be
-  injected by NVIDIA Container Toolkit. This avoids the driver/library mismatch
-  that damaged the old image.
+- The Dockerfile never installs an NVIDIA kernel driver. The target platform
+  currently injects a broken `/usr/bin/nvidia-smi` wrapper, so the exact
+  `nvidia-utils-535` and `libnvidia-compute-535` packages matching driver
+  `535.154.05` are downloaded and extracted, without `dpkg` installation, under
+  `/opt/nvidia-535.154.05`.
+- `/opt/nvidia-fallback` points to that extracted userspace fallback and
+  `/usr/local/bin/nvidia-smi` invokes it with the matching NVML library. This
+  avoids modifying the platform's runtime mount at `/usr/bin/nvidia-smi`.
+- The fallback is specific to the known V100 driver pool. A different host
+  driver requires compatibility validation and usually a rebuilt fallback.
 - The runtime must use `--gpus all` (or an explicit subset). PyTorch/NCCL will
   discover 2 to 6 visible GPUs dynamically.
 
@@ -94,7 +100,9 @@ incompatible releases while retaining patch-level updates.
 Common packages include SciPy, pandas, scikit-learn, h5py, PyArrow,
 Matplotlib, Seaborn, Pillow, headless OpenCV, imageio, PyAV, einops,
 safetensors, TensorBoard, W&B, tqdm, Rich, Datasets, Accelerate, Hugging Face
-Hub, peft, IPython, JupyterLab, ipykernel, pytest, and Ruff.
+Hub, peft, `socksio`, IPython, JupyterLab, ipykernel, pytest, and Ruff.
+`socksio` is explicit because HTTPX needs it when Hugging Face downloads use a
+SOCKS proxy reached through the SSH reverse tunnel.
 
 TensorFlow, JAX, OpenPI, FlashAttention, and uv are not installed. A future
 OpenPI checkout should own its own workspace-local uv environment because its
@@ -122,7 +130,13 @@ NumPy and Transformers requirements conflict with LeRobot 0.6.1.
   `SHA256:q/+K5ORLl6RPqFpsqY2NP6lnQkUQFRBqP4vJyI3AmAg`.
 - RSA and ED25519 server host keys are generated at container start under
   `/etc/ssh`. They are deliberately not written to the shared `/root/data1`.
-- The default command is `/usr/sbin/sshd -D -e`; port 22 is exposed.
+- The entrypoint always prepares and validates SSH. If a hosting platform
+  replaces the image command with `sleep infinity`, it starts `sshd` as a
+  background daemon first. If the command itself is `sshd`, it avoids starting
+  a duplicate listener and executes the requested foreground daemon.
+- `/usr/local/bin/sshd` forwards to the absolute `/usr/sbin/sshd` path and uses
+  the image's dedicated configuration unless the caller supplies `-f`.
+- The default command remains `/usr/sbin/sshd -D -e`; port 22 is exposed.
 
 Do not bake private keys, Hugging Face tokens, GitHub tokens, or W&B keys into
 the image.
@@ -148,10 +162,12 @@ Hugging Face endpoint with a runtime-provided token.
 
 ## Verification boundary
 
-The Dockerfile performs CPU-only import/version checks and `pip check` during
-every build. The entrypoint validates the SSH configuration after creating host
-keys. `scripts/check_environment.py` can inspect the GPU runtime without
-downloading a model.
+The Dockerfile performs CPU-only import/version checks, `pip check`, and static
+existence checks for the extracted NVIDIA fallback during every build. The
+entrypoint validates the SSH configuration after creating host keys.
+`scripts/check_environment.py` resolves `nvidia-smi` through `PATH`, so it uses
+the fallback rather than the platform's broken mount, and can inspect the GPU
+runtime without downloading a model.
 
 The remote acceptance owner should verify:
 

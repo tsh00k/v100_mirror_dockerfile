@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-mkdir -p /run/sshd
-ssh-keygen -A
+command_name="${1:-}"
+command_name="${command_name##*/}"
 
-if [[ "${1:-}" == "/usr/sbin/sshd" ]]; then
-  /usr/sbin/sshd -t -f /etc/ssh/sshd_config_v100
+if [[ "${command_name}" == "sshd" ]]; then
+  /usr/local/sbin/ensure-sshd --validate-only
+else
+  /usr/local/sbin/ensure-sshd
 fi
 
 exec "$@"

@@ -37,6 +37,7 @@ IMPORTS = (
     "scipy",
     "seaborn",
     "sklearn",
+    "socksio",
     "tensorboard",
     "torch",
     "torchcodec",

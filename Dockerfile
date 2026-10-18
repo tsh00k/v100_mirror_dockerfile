@@ -5,6 +5,8 @@ ARG APT_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/ubuntu
 ARG MINICONDA_URL=https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/Miniconda3-py312_25.1.1-2-Linux-x86_64.sh
 ARG MINICONDA_SHA256=4766d85b5f7d235ce250e998ebb5a8a8210cbd4f2b0fea4d2177b3ed9ea87884
 ARG PYTORCH_WHEEL_ROOT=https://mirror.sjtu.edu.cn/pytorch-wheels/cu118
+ARG NVIDIA_DRIVER_VERSION=535.154.05
+ARG NVIDIA_PACKAGE_REVISION=0ubuntu1
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -69,6 +71,20 @@ RUN sed -Ei \
       xz-utils \
       zip \
     && git lfs install --system \
+    && install -d -m 1777 /tmp/nvidia-debs \
+    && cd /tmp/nvidia-debs \
+    && apt-get download \
+      "libnvidia-compute-535=${NVIDIA_DRIVER_VERSION}-${NVIDIA_PACKAGE_REVISION}" \
+      "nvidia-utils-535=${NVIDIA_DRIVER_VERSION}-${NVIDIA_PACKAGE_REVISION}" \
+    && install -d -m 0755 "/opt/nvidia-${NVIDIA_DRIVER_VERSION}" \
+    && for deb in ./*.deb; do \
+         dpkg-deb -x "${deb}" "/opt/nvidia-${NVIDIA_DRIVER_VERSION}"; \
+       done \
+    && ln -s "/opt/nvidia-${NVIDIA_DRIVER_VERSION}" /opt/nvidia-fallback \
+    && test -x /opt/nvidia-fallback/usr/bin/nvidia-smi \
+    && test -e "/opt/nvidia-fallback/usr/lib/x86_64-linux-gnu/libnvidia-ml.so.${NVIDIA_DRIVER_VERSION}" \
+    && cd / \
+    && rm -rf /tmp/nvidia-debs \
     && rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub \
     && rm -rf /var/lib/apt/lists/*
 
@@ -105,12 +121,18 @@ RUN python -m pip install --no-cache-dir -r /tmp/requirements-lerobot.txt \
 COPY assets/vla-v100.pub /root/.ssh/authorized_keys
 COPY config/sshd_config /etc/ssh/sshd_config_v100
 COPY scripts/entrypoint.sh /usr/local/bin/v100-entrypoint
+COPY scripts/ensure-sshd.sh /usr/local/sbin/ensure-sshd
+COPY scripts/sshd.sh /usr/local/bin/sshd
+COPY scripts/nvidia-smi.sh /usr/local/bin/nvidia-smi
 COPY scripts/check_environment.py /usr/local/share/v100-image/check_environment.py
 COPY scripts/enable-public-mirrors.sh /usr/local/share/v100-image/enable-public-mirrors.sh
 
 RUN chmod 0700 /root/.ssh \
     && chmod 0600 /root/.ssh/authorized_keys \
     && chmod 0755 /usr/local/bin/v100-entrypoint \
+    && chmod 0755 /usr/local/sbin/ensure-sshd \
+    && chmod 0755 /usr/local/bin/sshd \
+    && chmod 0755 /usr/local/bin/nvidia-smi \
     && chmod 0644 /usr/local/share/v100-image/check_environment.py \
     && chmod 0644 /usr/local/share/v100-image/enable-public-mirrors.sh \
     && printf '\nsource /opt/conda/etc/profile.d/conda.sh\nconda activate lerobot\n' >> /root/.bashrc \

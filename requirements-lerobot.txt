@@ -1,0 +1,41 @@
+# PI0.5 inference plus dataset/training dependencies for smoke runs.
+lerobot[peft,pi,training]==0.6.1
+numpy>=2.0,<2.3
+transformers>=5.4,<5.6
+# TorchCodec 0.5 is the release line paired with PyTorch 2.7.
+torchcodec>=0.5,<0.6
+
+# Scientific computing and tabular data. Bounds shared with LeRobot's extras
+# are repeated here to keep pip from backtracking through incompatible releases.
+scipy>=1.14,<2
+pandas>=2,<3
+scikit-learn
+h5py
+pyarrow>=21,<30
+
+# Plotting, images, and video.
+matplotlib>=3.10.3,<4
+seaborn
+Pillow>=10,<13
+opencv-python-headless>=4.9,<4.14
+imageio
+av>=15,<16
+
+# Model utilities, experiment tracking, and CLI ergonomics.
+einops
+safetensors>=0.4.3,<1
+tensorboard
+wandb>=0.24,<0.28
+tqdm>=4.66,<5
+rich
+datasets>=4.8,<5
+accelerate>=1.14,<2
+huggingface-hub>=1.6,<2
+
+# Interactive development and focused testing/linting.
+ipython
+jupyterlab>=4,<5
+ipykernel>=6.5,<7
+pytest>=8.1,<10
+ruff
+

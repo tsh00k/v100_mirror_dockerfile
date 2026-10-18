@@ -1,0 +1,47 @@
+# Exported images and package archives
+*.tar
+*.tar.gz
+*.tgz
+*.whl
+*.deb
+*.conda
+
+# Model weights and checkpoints
+*.bin
+*.ckpt
+*.onnx
+*.pt
+*.pth
+*.safetensors
+checkpoints/
+
+# Local datasets, caches, and experiment output
+cache/
+data/
+outputs/
+runs/
+wandb/
+
+# Python environments and generated files
+__pycache__/
+*.py[cod]
+.conda/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Logs, editor files, and operating-system metadata
+*.log
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

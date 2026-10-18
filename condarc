@@ -1,0 +1,8 @@
+channels:
+  - conda-forge
+  - nodefaults
+channel_alias: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud
+show_channel_urls: true
+channel_priority: strict
+auto_activate_base: false
+
